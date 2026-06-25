@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ShoppingCart, Plus, FolderPlus, Trash2, Lock, LogOut } from "lucide-react";
+import { ShoppingCart, Plus, FolderPlus, Trash2, Lock, LogOut, Trash, ShoppingBag, Coffee } from "lucide-react";
 
 interface Product {
   id: string;
@@ -10,216 +10,199 @@ interface Product {
   category: string;
 }
 
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 export default function HomePage() {
   const [mounted, setMounted] = useState(false);
-  
-  // الأقسام الافتراضية
+  const [activeTab, setActiveTab] = useState<string>("beans");
+
+  // أقسام المتجر بالهوية الجديدة
   const [categories, setCategories] = useState([
-    { key: "beans", label: "محاصيل البن" },
-    { key: "tools", label: "أدوات الترشيح والتقطير" },
+    { key: "beans", label: "محاصيل البن الفاخرة" },
+    { key: "tools", label: "أدوات التقطير" },
     { key: "accessories", label: "الأكواب والمستلزمات" }
   ]);
 
-  // المنتجات الافتراضية
   const [products, setProducts] = useState<Product[]>([
     { id: "1", name: "إثيوبيا يرقاتشيف", description: "معالجة مغسولة، إيحاءات فواكه وحمضية لطيفة تناسب التقطير", price: 85, category: "beans" },
     { id: "2", name: "ميزان تيميمور الذكي", description: "ميزان دقيق لقياس القهوة بدقة 0.1 غرام مع مؤقت مدمج", price: 150, category: "tools" },
     { id: "3", name: "كوب سيراميك أنيق", description: "مصنوع يدوياً ويحتفظ بحرارة القهوة لفترة أطول", price: 85, category: "accessories" }
   ]);
 
-  const [activeTab, setActiveTab] = useState<string>("beans");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCartSidebar, setShowCartSidebar] = useState(false);
 
-  // حالات الأمان والـ Authentication
+  // نظام الأدمن
   const [isLoggedIn, setIsLoggedIn] = useState(false); 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  // بيانات الأدمن السرية (تستطيع تغييرها هنا)
   const ADMIN_EMAIL = "admin@smart-home.com";
   const ADMIN_PASSWORD = "Azzam7700_coffee"; 
 
-  // حالات إضافة البيانات
-  const [newCatLabel, setNewCatLabel] = useState("");
-  const [newCatKey, setNewCatKey] = useState("");
-  const [newProdName, setNewProdName] = useState("");
-  const [newProdDesc, setNewProdDesc] = useState("");
-  const [newProdPrice, setNewProdPrice] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  useEffect(() => { setMounted(true); }, []);
   if (!mounted) return null;
 
-  // دالة تسجيل الدخول
+  const addToCart = (product: Product) => {
+    const existingItem = cart.find(item => item.product.id === product.id);
+    if (existingItem) {
+      setCart(cart.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+    } else {
+      setCart([...cart, { product, quantity: 1 }]);
+    }
+    setShowCartSidebar(true);
+  };
+
+  const updateQuantity = (id: string, amount: number) => {
+    setCart(cart.map(item => {
+      if (item.product.id === id) {
+        const newQty = item.quantity + amount;
+        return newQty > 0 ? { ...item, quantity: newQty } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(item => item.product.id !== id));
+  };
+
+  const cartTotal = cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  const cartItemsCount = cart.reduce((count, item) => count + item.quantity, 0);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      setIsLoggedIn(true);
-      setShowLoginModal(false);
-      setLoginError("");
-      setEmail("");
-      setPassword("");
+      setIsLoggedIn(true); setShowLoginModal(false); setLoginError(""); setEmail(""); setPassword("");
     } else {
-      setLoginError("المعلومات السرية غير صحيحة! جرب مرة أخرى.");
+      setLoginError("المعلومات السرية غير صحيحة!");
     }
   };
 
-  const handleAddCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCatLabel || !newCatKey) return;
-    setCategories([...categories, { key: newCatKey.toLowerCase(), label: newCatLabel }]);
-    setNewCatLabel("");
-    setNewCatKey("");
-  };
-
-  const handleAddProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProdName || !newProdPrice) return;
-    setProducts([...products, {
-      id: Date.now().toString(),
-      name: newProdName,
-      description: newProdDesc,
-      price: parseFloat(newProdPrice),
-      category: activeTab
-    }]);
-    setNewProdName(""); setNewProdDesc(""); setNewProdPrice("");
-  };
-
-  const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
-  };
-
   return (
-    <div className="min-h-screen bg-[#FAF6F0] text-[#4A3E3D] font-sans flex flex-col" dir="rtl">
-      {/* النابار */}
-      <nav className="flex items-center justify-between px-8 py-5 bg-[#F0E5D8] border-b border-[#E3D4C1] sticky top-0 z-50 shadow-sm">
-        <div className="text-2xl font-black text-[#5C4033]">المنزل الذكي للقهوة المختصة</div>
-        <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-[#FCFBF9] text-[#4A433F] font-sans flex flex-col relative" dir="rtl">
+      
+      {/* 🧭 الهيدر الجديد الفاتح مع اللوقو والأيقونة */}
+      <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-[#F2EFEA] sticky top-0 z-40 shadow-xs">
+        {/* اللوقو الأنيق المطور برمجياً */}
+        <div className="flex items-center gap-2 cursor-pointer group">
+          <div className="p-2 bg-[#F7F4F0] text-[#8C7355] rounded-xl group-hover:scale-105 transition duration-200">
+            <Coffee className="w-5 h-5 stroke-[2.5]" />
+          </div>
+          <span className="text-xl font-black tracking-tight text-[#2B2623] bg-gradient-to-r from-[#2B2623] to-[#8C7355] bg-clip-text text-transparent">رَوقان</span>
+        </div>
+
+        {/* الأقسام */}
+        <div className="flex items-center gap-8">
           {categories.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveTab(cat.key)}
-              className={`pb-1 font-bold text-sm transition ${
-                activeTab === cat.key ? "text-[#5C4033] border-b-2 border-[#5C4033]" : "text-[#8C7A78] hover:text-[#5C4033]"
-              }`}
-            >
-              {cat.label}
-            </button>
+            <button key={cat.key} onClick={() => setActiveTab(cat.key)} className={`pb-1 font-bold text-xs tracking-wide transition-all ${activeTab === cat.key ? "text-[#8C7355] border-b-2 border-[#8C7355] font-black" : "text-[#A39C97] hover:text-[#8C7355]"}`}>{cat.label}</button>
           ))}
         </div>
+
         <div className="flex items-center gap-4">
           {isLoggedIn && (
-            <button 
-              onClick={() => setIsLoggedIn(false)} 
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition"
-            >
-              <LogOut className="w-3.5 h-3.5" /> خروج الأدمن
-            </button>
+            <button onClick={() => setIsLoggedIn(false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-xl text-[11px] font-bold hover:bg-red-100 transition"><LogOut className="w-3.5 h-3.5" /> خروج</button>
           )}
-          <div className="p-2.5 bg-[#E3D4C1] text-[#5C4033] rounded-full cursor-pointer hover:bg-[#D5C2AA] transition">
-            <ShoppingCart className="w-5 h-5" />
-          </div>
+          <button onClick={() => setShowCartSidebar(true)} className="p-2.5 bg-[#F7F4F0] text-[#4A433F] rounded-xl hover:bg-[#EFEBE4] transition relative">
+            <ShoppingCart className="w-4 h-4" />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#8C7355] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">{cartItemsCount}</span>
+            )}
+          </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <header className="text-center py-14 bg-gradient-to-b from-[#F0E5D8] to-[#FAF6F0]">
-        <h1 className="text-[#3A2A29] text-3xl md:text-4xl font-extrabold mb-3">أجواء المقاهي الدافئة في بيتك</h1>
-        <p className="text-[#7A6867] max-w-xl mx-auto text-sm leading-relaxed">تصفح أجود محاصيل القهوة المختصة وأدوات الترشيح الذكية بكل راحة وسهولة.</p>
-        {isLoggedIn && (
-          <div className="mt-4 inline-block bg-green-50 text-green-700 px-4 py-1 rounded-full text-xs font-bold border border-green-200 animate-pulse">
-            🔒 أنت الآن في وضع الإدارة (الأدمن)
-          </div>
-        )}
+      {/* ☕ هيدر ترحيبي هادئ جداً ومريح للعين */}
+      <header className="text-center py-16 bg-[#FBF9F6] border-b border-[#F2EFEA]">
+        <h1 className="text-[#2B2623] text-3xl font-black mb-2 tracking-tight">كوبٌ يصنع يومك</h1>
+        <p className="text-[#948C85] text-xs max-w-md mx-auto leading-relaxed">متجرك المتكامل لأجود أنواع محاصيل البن وأدوات التقطير الفاخرة التي تمنحك تجربة المقهى في منزلك.</p>
       </header>
 
-      {/* لوحة التحكم للأدمن - تظهر فقط وعاملاً تسجيل دخول */}
-      {isLoggedIn && (
-        <section className="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 w-full">
-          <div className="bg-[#F5EDE4] p-6 rounded-2xl border border-[#E3D4C1] shadow-sm">
-            <h2 className="text-base font-bold text-[#5C4033] mb-4 flex items-center gap-2"><FolderPlus className="w-5 h-5" /> التحكم بالأقسام</h2>
-            <form onSubmit={handleAddCategory} className="flex gap-2">
-              <input type="text" placeholder="اسم القسم الجديد" value={newCatLabel} onChange={(e) => setNewCatLabel(e.target.value)} className="flex-1 px-3 py-2 bg-white rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" />
-              <input type="text" placeholder="رمز فريد (إنجليزي)" value={newCatKey} onChange={(e) => setNewCatKey(e.target.value)} className="flex-1 px-3 py-2 bg-white rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" />
-              <button type="submit" className="px-4 py-2 bg-[#5C4033] text-white rounded-xl text-xs font-bold hover:bg-[#463026]">إضافة قسم</button>
-            </form>
-          </div>
-
-          <div className="bg-[#F5EDE4] p-6 rounded-2xl border border-[#E3D4C1] shadow-sm">
-            <h2 className="text-base font-bold text-[#5C4033] mb-4 flex items-center gap-2"><Plus className="w-5 h-5" /> إضافة منتج في ({categories.find(c => c.key === activeTab)?.label})</h2>
-            <form onSubmit={handleAddProduct} className="grid grid-cols-2 gap-2">
-              <input type="text" placeholder="اسم المنتج" value={newProdName} onChange={(e) => setNewProdName(e.target.value)} className="col-span-2 px-3 py-2 bg-white rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" />
-              <input type="text" placeholder="الوصف" value={newProdDesc} onChange={(e) => setNewProdDesc(e.target.value)} className="col-span-2 px-3 py-2 bg-white rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" />
-              <input type="number" placeholder="السعر" value={newProdPrice} onChange={(e) => setNewProdPrice(e.target.value)} className="px-3 py-2 bg-white rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" />
-              <button type="submit" className="py-2 bg-[#5C4033] text-white rounded-xl text-xs font-bold hover:bg-[#463026]">حفظ المنتج</button>
-            </form>
-          </div>
-        </section>
-      )}
-
-      {/* المنتجات */}
-      <main className="max-w-7xl mx-auto px-8 pb-20 flex-1 w-full">
+      {/* عرض المنتجات بشبكة نظيفة بيضاء */}
+      <main className="max-w-6xl mx-auto px-6 py-12 flex-1 w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.filter(p => p.category === activeTab).map((product) => (
-            <div key={product.id} className="bg-white p-5 rounded-2xl border border-[#EBE3D5] shadow-sm hover:shadow-md transition relative group">
-              {isLoggedIn && (
-                <button 
-                  onClick={() => handleDeleteProduct(product.id)}
-                  className="absolute top-3 left-3 p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition hover:bg-red-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-              <div className="w-full h-44 mb-4 bg-[#FAF6F0] rounded-xl flex items-center justify-center text-[#9C8A87] text-xs border border-dashed border-[#E3D4C1]">[ مساحة رفع صورة ]</div>
-              <h3 className="text-md font-bold text-[#3A2A29] mb-1">{product.name}</h3>
-              <p className="text-xs text-[#7A6867] mb-4 h-8 overflow-hidden">{product.description}</p>
-              <div className="flex items-center justify-between pt-2 border-t border-[#FAF6F0]">
-                <span className="text-md font-extrabold text-[#5C4033]">{product.price} ر.س</span>
-                <button className="px-4 py-1.5 bg-[#F0E5D8] text-[#5C4033] text-xs font-bold rounded-xl hover:bg-[#E3D4C1] transition">إضافة للسلة</button>
+            <div key={product.id} className="bg-white p-5 rounded-2xl border border-[#F0EFEA] hover:border-[#E5E2DA] transition-all duration-300 relative group flex flex-col justify-between">
+              <div>
+                <div className="w-full h-48 mb-4 bg-[#FBF9F6] rounded-xl flex items-center justify-center text-[#B2A9A1] text-xs border border-[#F2EFEA] font-medium">[ صورة المنتج ]</div>
+                <h3 className="text-sm font-bold text-[#2B2623] mb-1">{product.name}</h3>
+                <p className="text-xs text-[#948C85] mb-4 h-8 overflow-hidden leading-relaxed">{product.description}</p>
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-[#FBF9F6]">
+                <span className="text-sm font-black text-[#2B2623]">{product.price} ر.س</span>
+                <button onClick={() => addToCart(product)} className="px-4 py-1.5 bg-[#2B2623] text-white text-xs font-bold rounded-xl hover:bg-[#423B37] transition duration-200">إضافة للسلة</button>
               </div>
             </div>
           ))}
         </div>
       </main>
 
-      {/* الفوتر وزر الإدارة المخفي */}
-      <footer className="py-6 bg-[#F0E5D8] border-t border-[#E3D4C1] text-center text-xs text-[#8C7A78]">
-        <div>جميع الحقوق محفوظة © {new Date().getFullYear()} - المنزل الذكي للقهوة المختصة</div>
-        {!isLoggedIn && (
-          <button 
-            onClick={() => setShowLoginModal(true)} 
-            className="mt-2 text-[#5C4033] hover:underline font-bold inline-flex items-center gap-1 opacity-60 hover:opacity-100"
-          >
-            <Lock className="w-3 h-3" /> لوحة التحكم
-          </button>
-        )}
+      {/* 🛒 جانب السلة المنبثق بتصميم أوف وايت فاخر */}
+      {showCartSidebar && (
+        <div className="fixed inset-0 bg-black/10 backdrop-blur-xs z-50 flex justify-left animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-sm h-full shadow-2xl p-6 flex flex-col animate-in slide-in-from-left duration-200" dir="rtl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#F2EFEA]">
+              <h3 className="text-md font-black text-[#2B2623] flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> سلة المشتريات</h3>
+              <button onClick={() => setShowCartSidebar(false)} className="text-xs font-bold text-[#A39C97] hover:text-[#2B2623]">إغلاق ×</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-3">
+              {cart.length === 0 ? (
+                <div className="text-center py-20 text-xs text-[#A39C97]">سلتك فارغة حالياً..</div>
+              ) : (
+                cart.map(item => (
+                  <div key={item.product.id} className="flex items-center justify-between bg-[#FBF9F6] p-3 rounded-xl border border-[#F2EFEA]">
+                    <div>
+                      <h4 className="text-xs font-bold text-[#2B2623]">{item.product.name}</h4>
+                      <p className="text-[11px] text-[#8C7355] font-bold mt-0.5">{item.product.price * item.quantity} ر.س</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => updateQuantity(item.product.id, -1)} className="w-6 h-6 bg-white rounded-lg border text-xs font-bold flex items-center justify-center">-</button>
+                      <span className="text-xs font-bold">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.product.id, 1)} className="w-6 h-6 bg-white rounded-lg border text-xs font-bold flex items-center justify-center">+</button>
+                      <button onClick={() => removeFromCart(item.product.id)} className="p-1 text-red-500 rounded-lg mr-1"><Trash className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-[#F2EFEA] space-y-3">
+              <div className="flex justify-between text-xs font-bold">
+                <span>المجموع الكلي:</span>
+                <span className="text-sm font-black text-[#2B2623]">{cartTotal} ر.س</span>
+              </div>
+              <button onClick={() => alert(`سيتم نقلك لبوابة الدفع لإتمام مبلغ ${cartTotal} ر.س عبر Apple Pay قريباً!`)} disabled={cart.length === 0} className="w-full py-3 bg-black text-white text-xs font-black rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-900 transition disabled:opacity-40">
+                 Pay الشراء عبر
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* الفوتر */}
+      <footer className="py-6 bg-[#FBF9F6] border-t border-[#F2EFEA] text-center text-[11px] text-[#A39C97]">
+        <div>جميع الحقوق محفوظة © {new Date().getFullYear()} - رَوقان للقهوة المختصة</div>
+        {!isLoggedIn && <button onClick={() => setShowLoginModal(true)} className="mt-1 text-[#8C7355] font-bold text-[10px] opacity-40 hover:opacity-100">💻 الإدارة</button>}
       </footer>
 
-      {/* نافذة تسجيل الدخول (Modal) */}
+      {/* مودال الأدمن */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-2xl border border-[#E3D4C1] max-w-sm w-full mx-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-lg font-bold text-[#5C4033] mb-2 flex items-center gap-2"><Lock className="w-5 h-5" /> تسجيل دخول الأدمن</h3>
-            <p className="text-xs text-[#7A6867] mb-4">أدخل معلوماتك السرية لفتح أزرار تعديل المتجر والأقسام.</p>
-            
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-xs flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-2xl border border-[#F2EFEA] max-w-xs w-full mx-4 shadow-xl">
+            <h3 className="text-sm font-black text-[#2B2623] mb-3 flex items-center gap-2"><Lock className="w-4 h-4" /> دخول الأدمن</h3>
             <form onSubmit={handleLogin} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-[#5C4033] mb-1">الإيميل السري</label>
-                <input type="email" placeholder="admin@smart-home.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 bg-[#FAF6F0] rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-[#5C4033] mb-1">كلمة المرور</label>
-                <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 bg-[#FAF6F0] rounded-xl text-xs border border-[#E3D4C1] focus:outline-none" required />
-              </div>
-              
-              {loginError && <p className="text-xs font-semibold text-red-500">{loginError}</p>}
-              
-              <div className="flex gap-2 pt-2">
-                <button type="submit" className="flex-1 py-2 bg-[#5C4033] text-white rounded-xl text-xs font-bold hover:bg-[#463026]">دخول</button>
-                <button type="button" onClick={() => { setShowLoginModal(false); setLoginError(""); }} className="px-4 py-2 bg-[#FAF6F0] text-[#7A6867] rounded-xl text-xs font-bold hover:bg-[#F0E5D8]">إلغاء</button>
+              <input type="email" placeholder="الإيميل" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 bg-[#FBF9F6] rounded-xl text-xs border border-[#F2EFEA] focus:outline-none" required />
+              <input type="password" placeholder="كلمة المرور" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 bg-[#FBF9F6] rounded-xl text-xs border border-[#F2EFEA] focus:outline-none" required />
+              {loginError && <p className="text-[10px] font-bold text-red-500">{loginError}</p>}
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="flex-1 py-2 bg-black text-white rounded-xl text-xs font-bold">دخول</button>
+                <button type="button" onClick={() => { setShowLoginModal(false); setLoginError(""); }} className="px-3 py-2 bg-[#FBF9F6] text-[#A39C97] rounded-xl text-xs font-bold">إلغاء</button>
               </div>
             </form>
           </div>
